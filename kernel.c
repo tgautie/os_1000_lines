@@ -1,4 +1,5 @@
 #include "kernel.h"
+#include "common.h"
 
 typedef unsigned char uint8_t;
 typedef unsigned int uint32_t;
@@ -37,10 +38,12 @@ void *memset(void *buf, char c, size_t n) {
 }
 
 void kernel_main(void) {
-    const char *s = "\n\nHello World!\nCirce meilleur cat <3\n\n";
-    for (int i = 0; s[i] != '\0'; i++) {
-        putchar(s[i]);
-    }
+    printf("\n\nHello %s\n", "World!");
+    printf("1 + 2 = %d, %x\n", 1 + 2, 0x1234abcd);
+    printf("Negative number: %d\n", -42);
+    printf("Ending percent: %");
+    printf("\nDouble percent: %%");
+
 
     for (;;) {
         __asm__ __volatile__("wfi");
