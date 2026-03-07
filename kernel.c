@@ -30,19 +30,16 @@ void putchar(char ch) {
     sbi_call(ch, 0, 0, 0, 0, 0, 0, 1 /* Console Putchar */);
 }
 
-void *memset(void *buf, char c, size_t n) {
-    uint8_t *p = (uint8_t *) buf;
-    while (n--)
-        *p++ = c;
-    return buf;
-}
-
 void kernel_main(void) {
-    printf("\n\nHello %s\n", "World!");
-    printf("1 + 2 = %d, %x\n", 1 + 2, 0x1234abcd);
-    printf("Negative number: %d\n", -42);
-    printf("Ending percent: %");
-    printf("\nDouble percent: %%");
+    const char *s1 = "Hello";
+    const char *s2 = "Hello";
+    const int cmp = strcmp(s1, s2);
+    printf("Comparison output: %d\n", cmp);
+
+    char buffer[20];
+    strcpy(buffer, s1);
+    printf("Copied string: %s\n", buffer);
+    printf("Comparison output: %d\n", strcmp(buffer, s1));
 
 
     for (;;) {
