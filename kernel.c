@@ -41,6 +41,8 @@ void kernel_main(void) {
     printf("Copied string: %s\n", buffer);
     printf("Comparison output: %d\n", strcmp(buffer, s1));
 
+    PANIC("booted!");
+    printf("unreachable here!\n");
 
     for (;;) {
         __asm__ __volatile__("wfi");
