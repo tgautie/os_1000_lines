@@ -1,10 +1,6 @@
 #include "kernel.h"
 #include "common.h"
 
-typedef unsigned char uint8_t;
-typedef unsigned int uint32_t;
-typedef uint32_t size_t;
-
 extern char __bss[], __bss_end[], __stack_top[];
 
 struct sbiret sbi_call(long arg0, long arg1, long arg2, long arg3, long arg4,
@@ -131,9 +127,13 @@ void kernel_entry(void) {
     );
 }
 
-void kernel_main(void) {    
+void setup_environment() {
     memset(__bss, 0, (size_t) __bss_end - (size_t) __bss);
     WRITE_CSR(stvec, (uint32_t) kernel_entry);
+}
+
+void kernel_main(void) {    
+    setup_environment();
 
     paddr_t paddr0 = alloc_pages(1);
     paddr_t paddr1 = alloc_pages(1);
