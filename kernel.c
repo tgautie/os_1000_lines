@@ -127,11 +127,6 @@ void kernel_entry(void) {
     );
 }
 
-void setup_environment() {
-    memset(__bss, 0, (size_t) __bss_end - (size_t) __bss);
-    WRITE_CSR(stvec, (uint32_t) kernel_entry);
-}
-
 __attribute__((section(".text.boot")))
 __attribute__((naked))
 void boot(void) {
@@ -185,6 +180,29 @@ __attribute__((naked)) void switch_context(uint32_t *prev_sp,uint32_t *next_sp) 
 }
 
 struct process procs[PROCS_MAX]; // All process control structures.
+struct process *current_proc; // Currently running process
+struct process *idle_proc;    // Idle process
+
+void yield(void) {
+    // Search for a runnable process
+    struct process *next = idle_proc;
+    for (int i = 0; i < PROCS_MAX; i++) {
+        struct process *proc = &procs[(current_proc->pid + i) % PROCS_MAX];
+        if (proc->state == PROC_RUNNABLE && proc->pid > 0) {
+            next = proc;
+            break;
+        }
+    }
+
+    // If there's no runnable process other than the current one, return and continue processing
+    if (next == current_proc)
+        return;
+
+    // Context switch
+    struct process *prev = current_proc;
+    current_proc = next;
+    switch_context(&prev->sp, &next->sp);
+}
 
 struct process *create_process(uint32_t pc) {
     // Find an unused process control structure.
@@ -224,6 +242,16 @@ struct process *create_process(uint32_t pc) {
     return proc;
 }
 
+void setup_environment() {
+    memset(__bss, 0, (size_t) __bss_end - (size_t) __bss);
+    WRITE_CSR(stvec, (uint32_t) kernel_entry);
+
+    idle_proc = create_process((uint32_t) NULL);
+    idle_proc->pid = 0; // idle
+    current_proc = idle_proc;
+}
+
+
 void delay(void) {
     for (int i = 0; i < 300000000; i++)
         __asm__ __volatile__("nop"); // do nothing
@@ -236,7 +264,7 @@ void proc_a_entry(void) {
     printf("starting process A\n");
     while (1) {
         putchar('A');
-        switch_context(&proc_a->sp, &proc_b->sp);
+        yield();
         delay();
     }
 }
@@ -245,7 +273,7 @@ void proc_b_entry(void) {
     printf("starting process B\n");
     while (1) {
         putchar('B');
-        switch_context(&proc_b->sp, &proc_a->sp);
+        yield();
         delay();
     }
 }
@@ -255,8 +283,8 @@ void kernel_main(void) {
 
     proc_a = create_process((uint32_t) proc_a_entry);
     proc_b = create_process((uint32_t) proc_b_entry);
-    proc_a_entry();
 
+    yield();
     PANIC("unreachable here!");
 
 }
