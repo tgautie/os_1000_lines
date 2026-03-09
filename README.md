@@ -14,3 +14,6 @@ Compiler to choose: RISC-V rv32gc clang (trunk)
 Risc-V emulators:
 - https://github.com/d0iasm/rvemu
 - https://github.com/qemu/qemu
+
+Doc to read:
+- Calling convention https://riscv.org/wp-content/uploads/2024/12/riscv-calling.pdf
