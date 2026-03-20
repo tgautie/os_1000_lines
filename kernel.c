@@ -2,9 +2,15 @@
 #include "common.h"
 
 extern char __bss[], __bss_end[], __stack_top[];
+extern char __free_ram[], __free_ram_end[];
+
+struct process procs[PROCS_MAX]; // All process control structures.
+struct process *current_proc;    // Currently running process
+struct process *idle_proc;       // Idle process
 
 struct sbiret sbi_call(long arg0, long arg1, long arg2, long arg3, long arg4,
-                       long arg5, long fid, long eid) {
+                       long arg5, long fid, long eid)
+{
     register long a0 __asm__("a0") = arg0;
     register long a1 __asm__("a1") = arg1;
     register long a2 __asm__("a2") = arg2;
@@ -22,11 +28,13 @@ struct sbiret sbi_call(long arg0, long arg1, long arg2, long arg3, long arg4,
     return (struct sbiret){.error = a0, .value = a1};
 }
 
-void putchar(char ch) {
+void putchar(char ch)
+{
     sbi_call(ch, 0, 0, 0, 0, 0, 0, 1 /* Console Putchar */);
 }
 
-void handle_trap(struct trap_frame *f) {
+void handle_trap(struct trap_frame *f)
+{
     uint32_t scause = READ_CSR(scause);
     uint32_t stval = READ_CSR(stval);
     uint32_t user_pc = READ_CSR(sepc);
@@ -34,24 +42,23 @@ void handle_trap(struct trap_frame *f) {
     PANIC("unexpected trap scause=%x, stval=%x, sepc=%x\n", scause, stval, user_pc);
 }
 
-extern char __free_ram[], __free_ram_end[];
-
-paddr_t alloc_pages(uint32_t n) {
-    static paddr_t next_paddr = (paddr_t) __free_ram;
+paddr_t alloc_pages(uint32_t n)
+{
+    static paddr_t next_paddr = (paddr_t)__free_ram;
     paddr_t paddr = next_paddr;
     next_paddr += n * PAGE_SIZE;
 
-    if (next_paddr > (paddr_t) __free_ram_end)
+    if (next_paddr > (paddr_t)__free_ram_end)
         PANIC("out of memory");
 
-    memset((void *) paddr, 0, n * PAGE_SIZE);
+    memset((void *)paddr, 0, n * PAGE_SIZE);
     return paddr;
 }
 
-
 __attribute__((naked))
-__attribute__((aligned(4)))
-void kernel_entry(void) {
+__attribute__((aligned(4))) void
+kernel_entry(void)
+{
     __asm__ __volatile__(
         // Retrieve the kernel stack of the running process from sscratch.
         "csrrw sp, sscratch, sp\n"
@@ -130,22 +137,23 @@ void kernel_entry(void) {
         "lw s10, 4 * 28(sp)\n"
         "lw s11, 4 * 29(sp)\n"
         "lw sp,  4 * 30(sp)\n"
-        "sret\n"
-    );
+        "sret\n");
 }
 
 __attribute__((section(".text.boot")))
-__attribute__((naked))
-void boot(void) {
+__attribute__((naked)) void
+boot(void)
+{
     __asm__ __volatile__(
         "mv sp, %[stack_top]\n" // Set the stack pointer
         "j kernel_main\n"       // Jump to the kernel main function
         :
-        : [stack_top] "r" (__stack_top) // Pass the stack top address as %[stack_top]
+        : [stack_top] "r"(__stack_top) // Pass the stack top address as %[stack_top]
     );
 }
 
-__attribute__((naked)) void switch_context(uint32_t *prev_sp,uint32_t *next_sp) {
+__attribute__((naked)) void switch_context(uint32_t *prev_sp, uint32_t *next_sp)
+{
     __asm__ __volatile__(
         // Save callee-saved registers onto the current process's stack.
         "addi sp, sp, -13 * 4\n" // Allocate stack space for 13 4-byte registers
@@ -164,11 +172,11 @@ __attribute__((naked)) void switch_context(uint32_t *prev_sp,uint32_t *next_sp) 
         "sw s11, 12 * 4(sp)\n"
 
         // Switch the stack pointer.
-        "sw sp, (a0)\n"         // *prev_sp = sp;
-        "lw sp, (a1)\n"         // Switch stack pointer (sp) here
+        "sw sp, (a0)\n" // *prev_sp = sp;
+        "lw sp, (a1)\n" // Switch stack pointer (sp) here
 
         // Restore callee-saved registers from the next process's stack.
-        "lw ra,  0  * 4(sp)\n"  // Restore callee-saved registers only
+        "lw ra,  0  * 4(sp)\n" // Restore callee-saved registers only
         "lw s0,  1  * 4(sp)\n"
         "lw s1,  2  * 4(sp)\n"
         "lw s2,  3  * 4(sp)\n"
@@ -181,21 +189,19 @@ __attribute__((naked)) void switch_context(uint32_t *prev_sp,uint32_t *next_sp) 
         "lw s9,  10 * 4(sp)\n"
         "lw s10, 11 * 4(sp)\n"
         "lw s11, 12 * 4(sp)\n"
-        "addi sp, sp, 13 * 4\n"  // We've popped 13 4-byte registers from the stack
-        "ret\n"
-    );
+        "addi sp, sp, 13 * 4\n" // We've popped 13 4-byte registers from the stack
+        "ret\n");
 }
 
-struct process procs[PROCS_MAX]; // All process control structures.
-struct process *current_proc; // Currently running process
-struct process *idle_proc;    // Idle process
-
-void yield(void) {
+void yield(void)
+{
     // Search for a runnable process
     struct process *next = idle_proc;
-    for (int i = 0; i < PROCS_MAX; i++) {
+    for (int i = 0; i < PROCS_MAX; i++)
+    {
         struct process *proc = &procs[(current_proc->pid + i) % PROCS_MAX];
-        if (proc->state == PROC_RUNNABLE && proc->pid > 0) {
+        if (proc->state == PROC_RUNNABLE && proc->pid > 0)
+        {
             next = proc;
             break;
         }
@@ -208,8 +214,7 @@ void yield(void) {
     __asm__ __volatile__(
         "csrw sscratch, %[sscratch]\n"
         :
-        : [sscratch] "r" ((uint32_t) &next->stack[sizeof(next->stack)])
-    );
+        : [sscratch] "r"((uint32_t)&next->stack[sizeof(next->stack)]));
 
     // Context switch
     struct process *prev = current_proc;
@@ -217,12 +222,15 @@ void yield(void) {
     switch_context(&prev->sp, &next->sp);
 }
 
-struct process *create_process(uint32_t pc) {
+struct process *create_process(uint32_t pc)
+{
     // Find an unused process control structure.
     struct process *proc = NULL;
     int i;
-    for (i = 0; i < PROCS_MAX; i++) {
-        if (procs[i].state == PROC_UNUSED) {
+    for (i = 0; i < PROCS_MAX; i++)
+    {
+        if (procs[i].state == PROC_UNUSED)
+        {
             proc = &procs[i];
             break;
         }
@@ -233,39 +241,40 @@ struct process *create_process(uint32_t pc) {
 
     // Stack callee-saved registers. These register values will be restored in
     // the first context switch in switch_context.
-    uint32_t *sp = (uint32_t *) &proc->stack[sizeof(proc->stack)];
-    *--sp = 0;                      // s11
-    *--sp = 0;                      // s10
-    *--sp = 0;                      // s9
-    *--sp = 0;                      // s8
-    *--sp = 0;                      // s7
-    *--sp = 0;                      // s6
-    *--sp = 0;                      // s5
-    *--sp = 0;                      // s4
-    *--sp = 0;                      // s3
-    *--sp = 0;                      // s2
-    *--sp = 0;                      // s1
-    *--sp = 0;                      // s0
-    *--sp = (uint32_t) pc;          // ra
+    uint32_t *sp = (uint32_t *)&proc->stack[sizeof(proc->stack)];
+    *--sp = 0;            // s11
+    *--sp = 0;            // s10
+    *--sp = 0;            // s9
+    *--sp = 0;            // s8
+    *--sp = 0;            // s7
+    *--sp = 0;            // s6
+    *--sp = 0;            // s5
+    *--sp = 0;            // s4
+    *--sp = 0;            // s3
+    *--sp = 0;            // s2
+    *--sp = 0;            // s1
+    *--sp = 0;            // s0
+    *--sp = (uint32_t)pc; // ra
 
     // Initialize fields.
     proc->pid = i + 1;
     proc->state = PROC_RUNNABLE;
-    proc->sp = (uint32_t) sp;
+    proc->sp = (uint32_t)sp;
     return proc;
 }
 
-void setup_environment() {
-    memset(__bss, 0, (size_t) __bss_end - (size_t) __bss);
-    WRITE_CSR(stvec, (uint32_t) kernel_entry);
+void setup_environment()
+{
+    memset(__bss, 0, (size_t)__bss_end - (size_t)__bss);
+    WRITE_CSR(stvec, (uint32_t)kernel_entry);
 
-    idle_proc = create_process((uint32_t) NULL);
+    idle_proc = create_process((uint32_t)NULL);
     idle_proc->pid = 0; // idle
     current_proc = idle_proc;
 }
 
-
-void delay(void) {
+void delay(void)
+{
     for (int i = 0; i < 300000000; i++)
         __asm__ __volatile__("nop"); // do nothing
 }
@@ -273,32 +282,35 @@ void delay(void) {
 struct process *proc_a;
 struct process *proc_b;
 
-void proc_a_entry(void) {
+void proc_a_entry(void)
+{
     printf("starting process A\n");
-    while (1) {
+    while (1)
+    {
         putchar('A');
         yield();
         delay();
     }
 }
 
-void proc_b_entry(void) {
+void proc_b_entry(void)
+{
     printf("starting process B\n");
-    while (1) {
+    while (1)
+    {
         putchar('B');
         yield();
         delay();
-        __asm__ __volatile__("unimp");
     }
 }
 
-void kernel_main(void) {    
+void kernel_main(void)
+{
     setup_environment();
 
-    proc_a = create_process((uint32_t) proc_a_entry);
-    proc_b = create_process((uint32_t) proc_b_entry);
+    proc_a = create_process((uint32_t)proc_a_entry);
+    proc_b = create_process((uint32_t)proc_b_entry);
 
     yield();
     PANIC("unreachable here!");
-
 }
