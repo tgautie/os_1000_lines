@@ -41,3 +41,20 @@ control and status registers: used for processor control, configuration, and exc
 ### Calling convention 
 
 https://riscv.org/wp-content/uploads/2024/12/riscv-calling.pdf
+
+### Virtual addresses
+
+https://riscv-sv32-virtual-address.vercel.app/
+
+## QEMU commands
+
+- help: ctrl-A + H
+- exit: ctrl-A + X
+- open debug console: ctrl-A + C
+- in the debug console: 
+    - "info registers"
+    - "q"
+
+## Debugging guides
+
+Debugging virtual paging: https://operating-system-in-1000-lines.vercel.app/en/11-page-table#appendix-debugging-paging
