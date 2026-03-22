@@ -46,6 +46,10 @@ https://riscv.org/wp-content/uploads/2024/12/riscv-calling.pdf
 
 https://riscv-sv32-virtual-address.vercel.app/
 
+### Scause exception codes
+
+https://docs.openhwgroup.org/projects/cva6-user-manual/06_cv64a6_mmu/riscv/priv.html#scause
+
 ## QEMU commands
 
 - help: ctrl-A + H
