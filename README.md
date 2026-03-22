@@ -4,10 +4,6 @@ E-book: https://operating-system-in-1000-lines.vercel.app/en/
 
 Official repo: https://github.com/nuta/operating-system-in-1000-lines
 
-Risc-V spec: https://riscv.org/specifications/ratified/
-
-Qemu VM docs: https://www.qemu.org/docs/master/system/riscv/virt.html
-
 Compiler Explorer: https://godbolt.org/
 Compiler to choose: RISC-V rv32gc clang (trunk)
 
@@ -17,6 +13,8 @@ Risc-V emulators:
 
 
 ## Risc-V arch
+
+Risc-V spec: https://riscv.org/specifications/ratified/
 
 ### program counter
 pc = program counter
@@ -50,8 +48,11 @@ https://riscv-sv32-virtual-address.vercel.app/
 
 https://docs.openhwgroup.org/projects/cva6-user-manual/06_cv64a6_mmu/riscv/priv.html#scause
 
-## QEMU commands
+## QEMU
 
+Docs: https://www.qemu.org/docs/master/system/riscv/virt.html
+
+Commands:
 - help: ctrl-A + H
 - exit: ctrl-A + X
 - open debug console: ctrl-A + C
@@ -62,3 +63,7 @@ https://docs.openhwgroup.org/projects/cva6-user-manual/06_cv64a6_mmu/riscv/priv.
 ## Debugging guides
 
 Debugging virtual paging: https://operating-system-in-1000-lines.vercel.app/en/11-page-table#appendix-debugging-paging
+
+## Virtio legacy spec
+
+https://ozlabs.org/~rusty/virtio-spec/virtio-0.9.5.pdf
