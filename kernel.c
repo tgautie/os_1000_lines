@@ -249,9 +249,15 @@ void map_page(uint32_t *table1, uint32_t vaddr, paddr_t paddr, uint32_t flags)
     table0[vpn0] = ((paddr / PAGE_SIZE) << 10) | flags | PAGE_V;
 }
 
-void user_entry(void)
+__attribute__((naked)) void user_entry(void)
 {
-    PANIC("not yet implemented");
+    __asm__ __volatile__(
+        "csrw sepc, %[sepc]        \n"
+        "csrw sstatus, %[sstatus]  \n"
+        "sret                      \n"
+        :
+        : [sepc] "r"(USER_BASE),
+          [sstatus] "r"(SSTATUS_SPIE));
 }
 
 struct process *create_process(const void *image, size_t image_size)
